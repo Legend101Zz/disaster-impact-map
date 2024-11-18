@@ -1,16 +1,18 @@
 import axios from "axios";
 import { EarthquakeData, WeatherAlert } from "@/types/disasters";
+import { fetchEarthquakes } from "./earthquakeService";
 
-const USGS_API = import.meta.env.VITE_USGS_EARTHQUAKE_API;
 const WEATHER_API_KEY = import.meta.env.VITE_WEATHER_API_KEY;
 
 export class DisasterAPI {
-  static async getEarthquakes(
-    timeRange: string = "day"
-  ): Promise<EarthquakeData[]> {
+  static async getEarthquakes(): Promise<any> {
     try {
-      const response = await axios.get(`${USGS_API}/${timeRange}.geojson`);
-      return response.data.features;
+      const earthquakeData = await fetchEarthquakes({
+        minmagnitude: 4.0,
+        limit: 100,
+      });
+      //   console.log("earthquakeData", earthquakeData);
+      return earthquakeData;
     } catch (error) {
       console.error("Error fetching earthquake data:", error);
       return [];

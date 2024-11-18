@@ -4,6 +4,7 @@ import * as Cesium from 'cesium';
 import { DisasterZone } from '@/types/disasters';
 import { CesiumComponentRef } from 'resium';
 import { initializeCesium } from '@/utils/cesiumConfig';
+import { title } from 'process';
 
 // Initialize Cesium once
 initializeCesium();
@@ -17,37 +18,36 @@ const CesiumMap: React.FC<CesiumMapProps> = ({ disasterZones, onZoneSelect }) =>
 
     useEffect(() => {
         if (viewerRef.current?.cesiumElement) {
-            // Enable simultaneous requests
-            Cesium.RequestScheduler.requestsByServer["tile.googleapis.com:443"] = 18;
+            async function createMap() {
+                // Enable simultaneous requests
+                Cesium.RequestScheduler.requestsByServer["tile.googleapis.com:443"] = 18;
 
-            // Configure viewer
-            const viewer = viewerRef.current.cesiumElement;
-            viewer.scene.globe.enableLighting = true;
+                // Configure viewer
+                const viewer = viewerRef.current!.cesiumElement;
+                viewer!.scene.globe.enableLighting = true;
 
-            // Add Google 3D Tiles
-            viewer.scene.primitives.add(
-                new Cesium.Cesium3DTileset({
-                    url: `https://tile.googleapis.com/v1/3dtiles/root.json?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`,
-                    showCreditsOnScreen: true,
-                })
-            ).readyPromise.then((tileset) => {
-                // Handle tileset ready
-                viewer.zoomTo(tileset);
-            }).catch((error) => {
-                console.error('Error loading tileset:', error);
-            });
+                const tileset = await Cesium.Cesium3DTileset.fromUrl(
+                    `https://tile.googleapis.com/v1/3dtiles/root.json?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`
+                )
 
-            // Set initial view
-            viewer.camera.setView({
-                destination: Cesium.Cartesian3.fromDegrees(-98.35, 39.50, 5000000.0),
-            });
+                // Add Google 3D Tiles
+                viewer!.scene.primitives.add(
+                    tileset
+                )
 
-            // Cleanup function
-            return () => {
-                if (viewer && !viewer.isDestroyed()) {
-                    viewer.destroy();
-                }
-            };
+                // Set initial view
+                viewer!.camera.setView({
+                    destination: Cesium.Cartesian3.fromDegrees(-98.35, 39.50, 5000000.0),
+                });
+
+                // Cleanup function
+                return () => {
+                    if (viewer && !viewer.isDestroyed()) {
+                        viewer.destroy();
+                    }
+                };
+            }
+            createMap()
         }
     }, []);
 

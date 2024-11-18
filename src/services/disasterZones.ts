@@ -7,16 +7,13 @@ export const calculateRiskLevel = (magnitude: number): RiskLevel => {
   return "low";
 };
 
-export const convertEarthquakeToZone = (
-  earthquake: EarthquakeData
-): DisasterZone => {
-  const { id, properties, geometry } = earthquake;
+export const convertEarthquakeToZone = (earthquake: any): DisasterZone => {
   return {
-    id,
-    type: "earthquake",
-    riskLevel: calculateRiskLevel(properties.mag),
-    coordinates: geometry.coordinates,
-    description: properties.title,
-    lastIncident: new Date(properties.time).toISOString(),
+    id: earthquake.id,
+    type: earthquake.type!,
+    riskLevel: earthquake.riskLevel,
+    coordinates: earthquake.coordinates,
+    description: earthquake.description,
+    lastIncident: new Date(earthquake.time).toISOString(),
   };
 };

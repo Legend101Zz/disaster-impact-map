@@ -14,18 +14,14 @@ export interface DisasterZone {
 
 export interface EarthquakeData {
   id: string;
-  properties: {
-    mag: number;
-    place: string;
-    time: number;
-    alert: string | null;
-    tsunami: number;
-    title: string;
-  };
-  geometry: {
-    type: "Point";
-    coordinates: [number, number, number];
-  };
+  magnitude: number;
+  place: string;
+  time: number;
+  riskLevel: string;
+  type: string;
+  level: string | number;
+  description: string;
+  coordinates: [number, number, number];
 }
 
 export interface WeatherAlert {
