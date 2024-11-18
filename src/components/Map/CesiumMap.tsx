@@ -1,13 +1,13 @@
-import React, { useEffect, useRef } from 'react';
-import { Viewer, Entity } from 'resium';
-import * as Cesium from 'cesium';
 import { DisasterZone } from '@/types/disasters';
-import { CesiumComponentRef } from 'resium';
 import { initializeCesium } from '@/utils/cesiumConfig';
-import { title } from 'process';
+import * as Cesium from 'cesium';
+import React, { useEffect, useRef } from 'react';
+import { CesiumComponentRef, Entity, EntityDescription, PointGraphics, Viewer } from 'resium';
 
-// Initialize Cesium once
-initializeCesium();
+const CesiumInstance = initializeCesium()
+const position = CesiumInstance.Cartesian3.fromDegrees(-74.0707383, 40.7117244, 100);
+
+
 interface CesiumMapProps {
     disasterZones: DisasterZone[];
     onZoneSelect: (zone: DisasterZone) => void;
@@ -20,13 +20,12 @@ const CesiumMap: React.FC<CesiumMapProps> = ({ disasterZones, onZoneSelect }) =>
         if (viewerRef.current?.cesiumElement) {
             async function createMap() {
                 // Enable simultaneous requests
-                Cesium.RequestScheduler.requestsByServer["tile.googleapis.com:443"] = 18;
 
                 // Configure viewer
                 const viewer = viewerRef.current!.cesiumElement;
                 viewer!.scene.globe.enableLighting = true;
 
-                const tileset = await Cesium.Cesium3DTileset.fromUrl(
+                const tileset = await CesiumInstance.Cesium3DTileset.fromUrl(
                     `https://tile.googleapis.com/v1/3dtiles/root.json?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`
                 )
 
@@ -37,7 +36,12 @@ const CesiumMap: React.FC<CesiumMapProps> = ({ disasterZones, onZoneSelect }) =>
 
                 // Set initial view
                 viewer!.camera.setView({
-                    destination: Cesium.Cartesian3.fromDegrees(-98.35, 39.50, 5000000.0),
+                    destination: new Cesium.Cartesian3(-98.35, 39.50, 5000000.0),
+                    orientation: new Cesium.HeadingPitchRoll(
+                        4.6550106925119925,
+                        -0.2863894863138836,
+                        1.3561760425773173e-7,
+                    ),
                 });
 
                 // Cleanup function
@@ -51,15 +55,7 @@ const CesiumMap: React.FC<CesiumMapProps> = ({ disasterZones, onZoneSelect }) =>
         }
     }, []);
 
-    const getRiskColor = (riskLevel: DisasterZone['riskLevel']): Cesium.Color => {
-        switch (riskLevel) {
-            case 'severe': return Cesium.Color.RED;
-            case 'high': return Cesium.Color.ORANGE;
-            case 'medium': return Cesium.Color.YELLOW;
-            case 'low': return Cesium.Color.GREEN;
-            default: return Cesium.Color.BLUE;
-        }
-    };
+
 
     return (
         <Viewer
@@ -70,7 +66,15 @@ const CesiumMap: React.FC<CesiumMapProps> = ({ disasterZones, onZoneSelect }) =>
             baseLayerPicker={false}
             scene3DOnly={true}
             navigationHelpButton={false}
+            
         >
+            <Entity position={position} name="Tokyo">
+        <PointGraphics pixelSize={10} />
+        <EntityDescription>
+          <h1>Hello, world.</h1>
+          <p>JSX is available here!</p>
+        </EntityDescription>
+      </Entity>
             {disasterZones.map((zone) => (
                 <Entity
                     key={zone.id}
@@ -92,5 +96,13 @@ const CesiumMap: React.FC<CesiumMapProps> = ({ disasterZones, onZoneSelect }) =>
         </Viewer>
     );
 };
-
+function getRiskColor(riskLevel: DisasterZone['riskLevel']): Cesium.Color  {
+    switch (riskLevel) {
+        case 'severe': return Cesium.Color.RED;
+        case 'high': return Cesium.Color.ORANGE;
+        case 'medium': return Cesium.Color.YELLOW;
+        case 'low': return Cesium.Color.GREEN;
+        default: return Cesium.Color.BLUE;
+    }
+};
 export default CesiumMap;

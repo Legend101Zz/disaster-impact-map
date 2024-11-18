@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import CesiumMap from './components/Map/CesiumMap';
 import DisasterControls from './components/UI/DisasterControls';
 import DisasterInfo from './components/UI/DisasterInfo';
 import LoadingSpinner from './components/UI/LoadingSpinner';
 import { DisasterAPI } from './services/api';
-import { DisasterZone, DisasterType, RiskLevel, EarthquakeData } from './types/disasters';
 import { convertEarthquakeToZone } from './services/disasterZones';
+import { DisasterType, DisasterZone, EarthquakeData, RiskLevel } from './types/disasters';
 
 const App: React.FC = () => {
   const [selectedTypes, setSelectedTypes] = useState<DisasterType[]>(['earthquake']);
@@ -27,7 +27,7 @@ const App: React.FC = () => {
       const promises: Promise<any>[] = [];
 
       if (selectedTypes.includes('earthquake')) {
-        promises.push(DisasterAPI.getEarthquakes('week'));
+        promises.push(DisasterAPI.getEarthquakes());
       }
 
       const results = await Promise.all(promises);
