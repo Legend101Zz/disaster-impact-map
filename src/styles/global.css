@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.cesium-viewer {
+  @apply w-full h-full;
+}
+
+.disaster-control {
+  @apply bg-white rounded-lg shadow-lg p-4;
+}
+
+.control-button {
+  @apply px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors;
+}
+
+.risk-level-indicator {
+  @apply w-3 h-3 rounded-full inline-block mr-2;
+}
+
+.risk-level-severe {
+  @apply bg-red-500;
+}
+.risk-level-high {
+  @apply bg-orange-500;
+}
+.risk-level-medium {
+  @apply bg-yellow-500;
+}
+.risk-level-low {
+  @apply bg-green-500;
+}
