@@ -66,15 +66,15 @@ const CesiumMap: React.FC<CesiumMapProps> = ({ disasterZones, onZoneSelect }) =>
             baseLayerPicker={false}
             scene3DOnly={true}
             navigationHelpButton={false}
-            
+
         >
             <Entity position={position} name="Tokyo">
-        <PointGraphics pixelSize={10} />
-        <EntityDescription>
-          <h1>Hello, world.</h1>
-          <p>JSX is available here!</p>
-        </EntityDescription>
-      </Entity>
+                <PointGraphics pixelSize={10} />
+                <EntityDescription>
+                    <h1>Hello, world.</h1>
+                    <p>JSX is available here!</p>
+                </EntityDescription>
+            </Entity>
             {disasterZones.map((zone) => (
                 <Entity
                     key={zone.id}
@@ -96,7 +96,7 @@ const CesiumMap: React.FC<CesiumMapProps> = ({ disasterZones, onZoneSelect }) =>
         </Viewer>
     );
 };
-function getRiskColor(riskLevel: DisasterZone['riskLevel']): Cesium.Color  {
+function getRiskColor(riskLevel: DisasterZone['riskLevel']): Cesium.Color {
     switch (riskLevel) {
         case 'severe': return Cesium.Color.RED;
         case 'high': return Cesium.Color.ORANGE;
