@@ -11,7 +11,7 @@ export class DisasterAPI {
         minmagnitude: 4.0,
         limit: 100,
       });
-      //   console.log("earthquakeData", earthquakeData);
+      console.log("earthquakeData", earthquakeData);
       return earthquakeData;
     } catch (error) {
       console.error("Error fetching earthquake data:", error);

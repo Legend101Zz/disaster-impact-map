@@ -1,5 +1,5 @@
 import * as Cesium from "cesium";
-import { DisasterZone, RiskLevel } from "@/types/disasters";
+import { RiskLevel } from "@/types/disasters";
 
 export const getRiskColor = (riskLevel: RiskLevel): Cesium.Color => {
   switch (riskLevel) {

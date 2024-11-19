@@ -10,10 +10,12 @@ export const calculateRiskLevel = (magnitude: number): RiskLevel => {
 export const convertEarthquakeToZone = (earthquake: any): DisasterZone => {
   return {
     id: earthquake.id,
-    type: earthquake.type!,
-    riskLevel: earthquake.riskLevel,
-    coordinates: earthquake.coordinates,
+    type: "earthquake",
+    riskLevel: calculateRiskLevel(earthquake.magnitude),
+    coordinates: [earthquake.coordinates[0], earthquake.coordinates[1]], // longitude, latitude
     description: earthquake.description,
     lastIncident: new Date(earthquake.time).toISOString(),
+    magnitude: earthquake.magnitude, // preserve magnitude for visualization
+    depth: earthquake.depth,
   };
 };
