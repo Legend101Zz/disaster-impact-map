@@ -21,23 +21,26 @@ const EarthquakeTour: React.FC<TourControlsProps> = ({ disasterZones, viewerRef,
         if (isPlaying && viewerRef.current?.cesiumElement) {
             const viewer = viewerRef.current.cesiumElement;
             const currentZone = disasterZones[currentIndex];
-
-            // Calculate destination based on magnitude
             const magnitude = (currentZone as any).magnitude || 5;
-            const height = magnitude * 100000; // Higher magnitude = higher view
 
-            const destination = Cesium.Cartesian3.fromDegrees(
-                currentZone.coordinates[0],
-                currentZone.coordinates[1],
-                height
-            );
+            // Calculate better camera position
+            const longitude = currentZone.coordinates[0];
+            const latitude = currentZone.coordinates[1];
+            const height = magnitude * 50000; // Higher view for larger earthquakes
 
-            // Smooth camera flight
             viewer.camera.flyTo({
-                destination,
-                duration,
+                destination: Cesium.Cartesian3.fromDegrees(
+                    longitude,
+                    latitude,
+                    height
+                ),
+                orientation: {
+                    heading: Cesium.Math.toRadians(0),
+                    pitch: Cesium.Math.toRadians(-45), // 45-degree view angle
+                    roll: 0
+                },
+                duration: 3,
                 complete: () => {
-                    // Move to next earthquake after arrival
                     animationFrame = window.setTimeout(() => {
                         if (currentIndex < disasterZones.length - 1) {
                             setCurrentIndex(prev => prev + 1);
@@ -45,7 +48,7 @@ const EarthquakeTour: React.FC<TourControlsProps> = ({ disasterZones, viewerRef,
                             setIsPlaying(false);
                             setCurrentIndex(0);
                         }
-                    }, duration * 1000);
+                    }, 3000);
                 }
             });
         }
@@ -55,7 +58,8 @@ const EarthquakeTour: React.FC<TourControlsProps> = ({ disasterZones, viewerRef,
                 clearTimeout(animationFrame);
             }
         };
-    }, [currentIndex, isPlaying, disasterZones, viewerRef, duration]);
+    }, [currentIndex, isPlaying, disasterZones, viewerRef]);
+
 
     const handlePlayPause = () => {
         setIsPlaying(!isPlaying);

@@ -22,67 +22,111 @@ const CesiumMap: React.FC<CesiumMapProps> = ({ disasterZones, onZoneSelect }) =>
         if (viewerRef.current?.cesiumElement) {
             const viewer = viewerRef.current.cesiumElement;
 
-            viewer.scene.globe.enableLighting = true;
+            // Enable simultaneous requests
+            CesiumInstance.RequestScheduler.requestsByServer["tile.googleapis.com:443"] = 18;
 
-            // Load Google 3D Tiles
-            async function loadTileset() {
+            // Configure viewer
+            viewer.scene.globe.enableLighting = true;
+            viewer.scene.globe.baseColor = CesiumInstance.Color.BLACK;
+            viewer.scene.backgroundColor = CesiumInstance.Color.BLACK;
+
+            async function setupViewer() {
                 try {
                     const tileset = await CesiumInstance.Cesium3DTileset.fromUrl(
-                        `https://tile.googleapis.com/v1/3dtiles/root.json?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`
+                        `https://tile.googleapis.com/v1/3dtiles/root.json?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`,
+                        {
+                            showCreditsOnScreen: true
+                        }
                     );
+
                     viewer.scene.primitives.add(tileset);
+
+                    // Set initial view
+                    viewer.camera.setView({
+                        destination: CesiumInstance.Cartesian3.fromDegrees(120, 0, 20000000.0),
+                        orientation: {
+                            heading: 0.0,
+                            pitch: -CesiumInstance.Math.PI_OVER_TWO,
+                            roll: 0.0,
+                        }
+                    });
+
                 } catch (error) {
-                    console.error('Error loading Google 3D Tiles:', error);
+                    console.error('Error setting up viewer:', error);
                 }
             }
-            loadTileset();
 
-            viewer.camera.setView({
-                destination: Cesium.Cartesian3.fromDegrees(120, 0, 20000000.0),
-                orientation: {
-                    heading: 0.0,
-                    pitch: -Cesium.Math.PI_OVER_TWO,
-                    roll: 0.0,
-                }
-            });
-
-            // Enable terrain
-            viewer.scene.globe.enableLighting = true;
-            viewer.scene.globe.terrainExaggeration = 1.0;
+            setupViewer();
         }
     }, []);
 
     const getEntityProperties = (zone: DisasterZone, isHighlighted: boolean) => {
         const magnitude = (zone as any).magnitude || 5;
+        const color = getRiskColor(zone.riskLevel);
+        const impactRadius = Math.pow(2, magnitude) * 5000; // Scale radius with magnitude
+
         return {
-            position: Cesium.Cartesian3.fromDegrees(
+            position: CesiumInstance.Cartesian3.fromDegrees(
                 zone.coordinates[0],
                 zone.coordinates[1],
                 0
             ),
+            // Main point
             point: {
                 pixelSize: isHighlighted ? 20 : 15,
-                color: getRiskColor(zone.riskLevel).withAlpha(isHighlighted ? 1.0 : 0.8),
-                outlineColor: Cesium.Color.WHITE,
-                outlineWidth: isHighlighted ? 3 : 2,
-                disableDepthTestDistance: Number.POSITIVE_INFINITY,
+                color: color,
+                outlineColor: CesiumInstance.Color.WHITE,
+                outlineWidth: 2,
+                heightReference: CesiumInstance.HeightReference.CLAMP_TO_GROUND,
+                disableDepthTestDistance: Number.POSITIVE_INFINITY
             },
+            // Impact radius ellipse
+            ellipse: {
+                semiMinorAxis: impactRadius,
+                semiMajorAxis: impactRadius,
+                material: color.withAlpha(0.3),
+                outline: true,
+                outlineColor: color,
+                outlineWidth: 2,
+                height: 0,
+                heightReference: CesiumInstance.HeightReference.CLAMP_TO_GROUND,
+                classificationType: CesiumInstance.ClassificationType.BOTH
+            },
+            // Vertical cylinder for 3D effect
+            cylinder: {
+                length: magnitude * 100000, // Height based on magnitude
+                topRadius: impactRadius * 0.1,
+                bottomRadius: impactRadius * 0.1,
+                material: color.withAlpha(0.3),
+                outline: true,
+                outlineColor: color,
+                numberOfVerticalLines: 16
+            },
+            // Magnitude label
             label: {
                 text: `M${magnitude.toFixed(1)}`,
                 font: isHighlighted ? 'bold 16px sans-serif' : '14px sans-serif',
-                style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                style: CesiumInstance.LabelStyle.FILL_AND_OUTLINE,
                 outlineWidth: 2,
-                verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-                pixelOffset: new Cesium.Cartesian2(0, -10),
+                outlineColor: CesiumInstance.Color.BLACK,
+                verticalOrigin: CesiumInstance.VerticalOrigin.BOTTOM,
+                pixelOffset: new CesiumInstance.Cartesian2(0, -10),
                 disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                show: magnitude >= 4.5 || isHighlighted,
+                heightReference: CesiumInstance.HeightReference.CLAMP_TO_GROUND,
+                fillColor: CesiumInstance.Color.WHITE,
+                showBackground: true,
+                backgroundColor: color.withAlpha(0.7)
             },
+            // Description for popup
             description: `
-                <h3>Earthquake</h3>
-                <p>Magnitude: ${magnitude.toFixed(1)}</p>
-                <p>Location: ${zone.description}</p>
-                <p>Time: ${new Date(zone.lastIncident || '').toLocaleString()}</p>
-                <p>Depth: ${(zone as any).depth?.toFixed(1)} km</p>
+                <div style="background-color: rgba(0,0,0,0.7); color: white; padding: 10px; border-radius: 5px;">
+                    <h3 style="color: ${color.toCssColorString()}">Earthquake</h3>
+                    <p><strong>Magnitude:</strong> ${magnitude.toFixed(1)}</p>
+                    <p><strong>Location:</strong> ${zone.description}</p>
+                    <p><strong>Time:</strong> ${new Date(zone.lastIncident || '').toLocaleString()}</p>
+                    <p><strong>Depth:</strong> ${(zone as any).depth?.toFixed(1)} km</p>
+                    <p><strong>Risk Level:</strong> ${zone.riskLevel.toUpperCase()}</p>
+                </div>
             `
         };
     };
@@ -99,6 +143,9 @@ const CesiumMap: React.FC<CesiumMapProps> = ({ disasterZones, onZoneSelect }) =>
                 homeButton={false}
                 geocoder={false}
                 sceneModePicker={false}
+                infoBox={true}
+                selectionIndicator={true}
+                shadows={true}
             >
                 {disasterZones.map((zone) => {
                     const isHighlighted = zone.id === highlightedZone;
@@ -108,13 +155,27 @@ const CesiumMap: React.FC<CesiumMapProps> = ({ disasterZones, onZoneSelect }) =>
                         <Entity
                             key={zone.id}
                             {...props}
-                            onClick={() => onZoneSelect(zone)}
+                            onClick={() => {
+                                setHighlightedZone(zone.id);
+                                onZoneSelect(zone);
+                            }}
                         />
                     );
                 })}
             </Viewer>
 
-            {/* Tour Button */}
+            {/* Tour controls remain the same */}
+            {showTour && (
+                <EarthquakeTour
+                    disasterZones={disasterZones}
+                    viewerRef={viewerRef}
+                    onClose={() => {
+                        setShowTour(false);
+                        setHighlightedZone(null);
+                    }}
+                />
+            )}
+
             {!showTour && disasterZones.length > 0 && (
                 <button
                     onClick={() => setShowTour(true)}
@@ -124,26 +185,17 @@ const CesiumMap: React.FC<CesiumMapProps> = ({ disasterZones, onZoneSelect }) =>
                     <span>Start Earthquake Tour</span>
                 </button>
             )}
-
-            {/* Tour Controls */}
-            {showTour && (
-                <EarthquakeTour
-                    disasterZones={disasterZones}
-                    viewerRef={viewerRef}
-                    onClose={() => setShowTour(false)}
-                />
-            )}
         </>
     );
 };
 
 function getRiskColor(riskLevel: DisasterZone['riskLevel']): Cesium.Color {
     switch (riskLevel) {
-        case 'severe': return Cesium.Color.RED;
-        case 'high': return Cesium.Color.ORANGE;
-        case 'medium': return Cesium.Color.YELLOW;
-        case 'low': return Cesium.Color.GREEN;
-        default: return Cesium.Color.BLUE;
+        case 'severe': return CesiumInstance.Color.RED;
+        case 'high': return CesiumInstance.Color.ORANGE;
+        case 'medium': return CesiumInstance.Color.YELLOW;
+        case 'low': return CesiumInstance.Color.GREEN;
+        default: return CesiumInstance.Color.BLUE;
     }
 }
 
