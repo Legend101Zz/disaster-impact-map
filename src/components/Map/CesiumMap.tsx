@@ -1,10 +1,12 @@
 import { DisasterZone } from '@/types/disasters';
 import { initializeCesium } from '@/utils/cesiumConfig';
 import * as Cesium from 'cesium';
-import React, { useEffect, useRef, useState } from 'react';
-import { CesiumComponentRef, Entity, Viewer } from 'resium';
-import EarthquakeTour from './EarthquakeTour';
 import { Map } from 'lucide-react';
+import React, { Fragment, useEffect, useRef, useState } from 'react';
+import { 
+    // Billboard, BillboardCollection,
+     CesiumComponentRef, Entity, EntityDescription, Label, LabelCollection, Viewer } from 'resium';
+import EarthquakeTour from './EarthquakeTour';
 
 const CesiumInstance = initializeCesium();
 
@@ -12,6 +14,7 @@ interface CesiumMapProps {
     disasterZones: DisasterZone[];
     onZoneSelect: (zone: DisasterZone) => void;
 }
+const center = CesiumInstance.Cartesian3.fromDegrees(-75.59777, 40.03883);
 
 const CesiumMap: React.FC<CesiumMapProps> = ({ disasterZones, onZoneSelect }) => {
     const viewerRef = useRef<CesiumComponentRef<Cesium.Viewer>>(null);
@@ -104,7 +107,7 @@ const CesiumMap: React.FC<CesiumMapProps> = ({ disasterZones, onZoneSelect }) =>
             },
             // Magnitude label
             label: {
-                text: `M${magnitude.toFixed(1)}`,
+                text: `Magnitute of ${magnitude.toFixed(1)}`,
                 font: isHighlighted ? 'bold 16px sans-serif' : '14px sans-serif',
                 style: CesiumInstance.LabelStyle.FILL_AND_OUTLINE,
                 outlineWidth: 2,
@@ -118,16 +121,7 @@ const CesiumMap: React.FC<CesiumMapProps> = ({ disasterZones, onZoneSelect }) =>
                 backgroundColor: color.withAlpha(0.7)
             },
             // Description for popup
-            description: `
-                <div style="background-color: rgba(0,0,0,0.7); color: white; padding: 10px; border-radius: 5px;">
-                    <h3 style="color: ${color.toCssColorString()}">Earthquake</h3>
-                    <p><strong>Magnitude:</strong> ${magnitude.toFixed(1)}</p>
-                    <p><strong>Location:</strong> ${zone.description}</p>
-                    <p><strong>Time:</strong> ${new Date(zone.lastIncident || '').toLocaleString()}</p>
-                    <p><strong>Depth:</strong> ${(zone as any).depth?.toFixed(1)} km</p>
-                    <p><strong>Risk Level:</strong> ${zone.riskLevel.toUpperCase()}</p>
-                </div>
-            `
+            description: zone.description
         };
     };
 
@@ -147,21 +141,36 @@ const CesiumMap: React.FC<CesiumMapProps> = ({ disasterZones, onZoneSelect }) =>
                 selectionIndicator={true}
                 shadows={true}
             >
-                {disasterZones.map((zone) => {
-                    const isHighlighted = zone.id === highlightedZone;
-                    const props = getEntityProperties(zone, isHighlighted);
+                <LabelCollection modelMatrix={CesiumInstance.Transforms.eastNorthUpToFixedFrame(center)}>
+                        {disasterZones.map((zone) => {
+                            const isHighlighted = zone.id === highlightedZone;
+                            const props = getEntityProperties(zone, isHighlighted);
 
-                    return (
-                        <Entity
-                            key={zone.id}
-                            {...props}
-                            onClick={() => {
-                                setHighlightedZone(zone.id);
-                                onZoneSelect(zone);
-                            }}
-                        />
-                    );
-                })}
+                            return (<Fragment key={zone.id}>
+                                <Entity
+
+                                    name={zone.id}
+                                    {...props}
+                                    tracked
+                                    onClick={() => {
+                                        setHighlightedZone(zone.id);
+                                        onZoneSelect(zone);
+                                    }}
+                                >
+                                    <EntityDescription>
+                                        <h3>Earthquake</h3>
+                                        <p><strong>Location:</strong> ${zone.description}</p>
+                                    </EntityDescription>
+                                </Entity>
+                                <Label id={zone.id} position={getEntityProperties(zone, false).position}{...getEntityProperties(zone, false).label} />
+                            </Fragment>
+                            );
+                        })}
+
+                    </LabelCollection>
+                {/* <BillboardCollection modelMatrix={CesiumInstance.Transforms.eastNorthUpToFixedFrame(center)}> */}
+                        {/* <Billboard id={zone.id} position={getEntityProperties(zone, false).position} {...getEntityProperties(zone, false)}/> */}
+                {/* </BillboardCollection> */}
             </Viewer>
 
             {/* Tour controls remain the same */}
