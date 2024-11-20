@@ -7,13 +7,19 @@ import { DisasterZone } from '@/types/disasters';
 interface TourControlsProps {
     disasterZones: DisasterZone[];
     viewerRef: React.RefObject<CesiumComponentRef<Cesium.Viewer>>;
+    setHighlightedZone: (zone: string | null) => void;
     onClose: () => void;
 }
 
-const EarthquakeTour: React.FC<TourControlsProps> = ({ disasterZones, viewerRef, onClose }) => {
+const EarthquakeTour: React.FC<TourControlsProps> = ({ 
+    disasterZones, 
+    viewerRef, 
+    setHighlightedZone, 
+    onClose 
+}) => {
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [duration] = useState(3); // seconds per location
+    const duration = 4; // seconds per location
 
     useEffect(() => {
         let animationFrame: number;
@@ -23,15 +29,18 @@ const EarthquakeTour: React.FC<TourControlsProps> = ({ disasterZones, viewerRef,
             const currentZone = disasterZones[currentIndex];
             const magnitude = (currentZone as any).magnitude || 5;
 
+            // Set highlighted zone
+            setHighlightedZone(currentZone.id);
+
             // Calculate better camera position
             const longitude = currentZone.coordinates[0];
             const latitude = currentZone.coordinates[1];
-            const height = magnitude * 50000; // Higher view for larger earthquakes
+            const height = magnitude * 190000;
 
             viewer.camera.flyTo({
                 destination: Cesium.Cartesian3.fromDegrees(
                     longitude,
-                    latitude,
+                    latitude - 10,
                     height
                 ),
                 orientation: {
@@ -48,7 +57,7 @@ const EarthquakeTour: React.FC<TourControlsProps> = ({ disasterZones, viewerRef,
                             setIsPlaying(false);
                             setCurrentIndex(0);
                         }
-                    }, 3000);
+                    }, duration);
                 }
             });
         }
@@ -58,8 +67,7 @@ const EarthquakeTour: React.FC<TourControlsProps> = ({ disasterZones, viewerRef,
                 clearTimeout(animationFrame);
             }
         };
-    }, [currentIndex, isPlaying, disasterZones, viewerRef]);
-
+    }, [currentIndex, isPlaying, disasterZones, viewerRef, setHighlightedZone]);
 
     const handlePlayPause = () => {
         setIsPlaying(!isPlaying);
@@ -75,6 +83,13 @@ const EarthquakeTour: React.FC<TourControlsProps> = ({ disasterZones, viewerRef,
         if (currentIndex > 0) {
             setCurrentIndex(prev => prev - 1);
         }
+    };
+
+    const handleClose = () => {
+        setIsPlaying(false);
+        setCurrentIndex(0);
+        setHighlightedZone(null); // Reset highlighted zone
+        onClose();
     };
 
     const currentZone = disasterZones[currentIndex];
@@ -106,7 +121,7 @@ const EarthquakeTour: React.FC<TourControlsProps> = ({ disasterZones, viewerRef,
                 </button>
 
                 <button
-                    onClick={onClose}
+                    onClick={handleClose}
                     className="p-2 hover:bg-gray-100 rounded-full"
                 >
                     <X className="w-5 h-5" />

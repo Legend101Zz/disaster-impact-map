@@ -3,10 +3,9 @@ import { initializeCesium } from '@/utils/cesiumConfig';
 import * as Cesium from 'cesium';
 import { Map } from 'lucide-react';
 import React, { Fragment, useEffect, useRef, useState } from 'react';
-import { 
-    // Billboard, BillboardCollection,
-     CesiumComponentRef, Entity, EntityDescription, Label, LabelCollection, Viewer } from 'resium';
+import { CesiumComponentRef, Entity, EntityDescription, Label, LabelCollection, Viewer } from 'resium';
 import EarthquakeTour from './EarthquakeTour';
+
 
 const CesiumInstance = initializeCesium();
 
@@ -14,7 +13,6 @@ interface CesiumMapProps {
     disasterZones: DisasterZone[];
     onZoneSelect: (zone: DisasterZone) => void;
 }
-const center = CesiumInstance.Cartesian3.fromDegrees(-75.59777, 40.03883);
 
 const CesiumMap: React.FC<CesiumMapProps> = ({ disasterZones, onZoneSelect }) => {
     const viewerRef = useRef<CesiumComponentRef<Cesium.Viewer>>(null);
@@ -25,10 +23,10 @@ const CesiumMap: React.FC<CesiumMapProps> = ({ disasterZones, onZoneSelect }) =>
         if (viewerRef.current?.cesiumElement) {
             const viewer = viewerRef.current.cesiumElement;
 
-            // Enable simultaneous requests
-            CesiumInstance.RequestScheduler.requestsByServer["tile.googleapis.com:443"] = 18;
+            // Enable simultaneous requests for tiles
+            CesiumInstance.RequestScheduler.requestsByServer['tile.googleapis.com:443'] = 18;
 
-            // Configure viewer
+            // Configure the viewer
             viewer.scene.globe.enableLighting = true;
             viewer.scene.globe.baseColor = CesiumInstance.Color.BLACK;
             viewer.scene.backgroundColor = CesiumInstance.Color.BLACK;
@@ -37,23 +35,20 @@ const CesiumMap: React.FC<CesiumMapProps> = ({ disasterZones, onZoneSelect }) =>
                 try {
                     const tileset = await CesiumInstance.Cesium3DTileset.fromUrl(
                         `https://tile.googleapis.com/v1/3dtiles/root.json?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`,
-                        {
-                            showCreditsOnScreen: true
-                        }
+                        { showCreditsOnScreen: true }
                     );
 
                     viewer.scene.primitives.add(tileset);
 
-                    // Set initial view
+                    // Set initial camera view
                     viewer.camera.setView({
                         destination: CesiumInstance.Cartesian3.fromDegrees(120, 0, 20000000.0),
                         orientation: {
                             heading: 0.0,
                             pitch: -CesiumInstance.Math.PI_OVER_TWO,
                             roll: 0.0,
-                        }
+                        },
                     });
-
                 } catch (error) {
                     console.error('Error setting up viewer:', error);
                 }
@@ -65,7 +60,8 @@ const CesiumMap: React.FC<CesiumMapProps> = ({ disasterZones, onZoneSelect }) =>
 
     const getEntityProperties = (zone: DisasterZone, isHighlighted: boolean) => {
         const magnitude = (zone as any).magnitude || 5;
-        const color = getRiskColor(zone.riskLevel);
+        const color = isHighlighted ? CesiumInstance.Color.CYAN : getRiskColor(zone.riskLevel);
+        const labelColor = isHighlighted ? CesiumInstance.Color.CYAN : CesiumInstance.Color.WHITE;
         const impactRadius = Math.pow(2, magnitude) * 5000; // Scale radius with magnitude
 
         return {
@@ -74,40 +70,16 @@ const CesiumMap: React.FC<CesiumMapProps> = ({ disasterZones, onZoneSelect }) =>
                 zone.coordinates[1],
                 0
             ),
-            // Main point
             point: {
                 pixelSize: isHighlighted ? 20 : 15,
                 color: color,
                 outlineColor: CesiumInstance.Color.WHITE,
                 outlineWidth: 2,
                 heightReference: CesiumInstance.HeightReference.CLAMP_TO_GROUND,
-                disableDepthTestDistance: Number.POSITIVE_INFINITY
+                disableDepthTestDistance: Number.POSITIVE_INFINITY,
             },
-            // Impact radius ellipse
-            ellipse: {
-                semiMinorAxis: impactRadius,
-                semiMajorAxis: impactRadius,
-                material: color.withAlpha(0.3),
-                outline: true,
-                outlineColor: color,
-                outlineWidth: 2,
-                height: 0,
-                heightReference: CesiumInstance.HeightReference.CLAMP_TO_GROUND,
-                classificationType: CesiumInstance.ClassificationType.BOTH
-            },
-            // Vertical cylinder for 3D effect
-            cylinder: {
-                length: magnitude * 100000, // Height based on magnitude
-                topRadius: impactRadius * 0.1,
-                bottomRadius: impactRadius * 0.1,
-                material: color.withAlpha(0.3),
-                outline: true,
-                outlineColor: color,
-                numberOfVerticalLines: 16
-            },
-            // Magnitude label
             label: {
-                text: `Magnitute of ${magnitude.toFixed(1)}`,
+                text: `Magnitude: ${magnitude.toFixed(1)}`,
                 font: isHighlighted ? 'bold 16px sans-serif' : '14px sans-serif',
                 style: CesiumInstance.LabelStyle.FILL_AND_OUTLINE,
                 outlineWidth: 2,
@@ -116,12 +88,11 @@ const CesiumMap: React.FC<CesiumMapProps> = ({ disasterZones, onZoneSelect }) =>
                 pixelOffset: new CesiumInstance.Cartesian2(0, -10),
                 disableDepthTestDistance: Number.POSITIVE_INFINITY,
                 heightReference: CesiumInstance.HeightReference.CLAMP_TO_GROUND,
-                fillColor: CesiumInstance.Color.WHITE,
+                fillColor: labelColor,
                 showBackground: true,
-                backgroundColor: color.withAlpha(0.7)
+                backgroundColor: color.withAlpha(0.7),
             },
-            // Description for popup
-            description: zone.description
+            description: zone.description,
         };
     };
 
@@ -141,17 +112,16 @@ const CesiumMap: React.FC<CesiumMapProps> = ({ disasterZones, onZoneSelect }) =>
                 selectionIndicator={true}
                 shadows={true}
             >
-                <LabelCollection modelMatrix={CesiumInstance.Transforms.eastNorthUpToFixedFrame(center)}>
-                        {disasterZones.map((zone) => {
-                            const isHighlighted = zone.id === highlightedZone;
-                            const props = getEntityProperties(zone, isHighlighted);
+                <LabelCollection>
+                    {disasterZones.map((zone) => {
+                        const isHighlighted = zone.id === highlightedZone;
+                        const props = getEntityProperties(zone, isHighlighted);
 
-                            return (<Fragment key={zone.id}>
+                        return (
+                            <Fragment key={zone.id}>
                                 <Entity
-
                                     name={zone.id}
                                     {...props}
-                                    tracked
                                     onClick={() => {
                                         setHighlightedZone(zone.id);
                                         onZoneSelect(zone);
@@ -159,25 +129,28 @@ const CesiumMap: React.FC<CesiumMapProps> = ({ disasterZones, onZoneSelect }) =>
                                 >
                                     <EntityDescription>
                                         <h3>Earthquake</h3>
-                                        <p><strong>Location:</strong> ${zone.description}</p>
+                                        <p>
+                                            <strong>Location:</strong> {zone.description}
+                                        </p>
                                     </EntityDescription>
                                 </Entity>
-                                <Label id={zone.id} position={getEntityProperties(zone, false).position}{...getEntityProperties(zone, false).label} />
+                                <Label
+                                    id={zone.id}
+                                    position={props.position}
+                                    {...props.label}
+                                />
                             </Fragment>
-                            );
-                        })}
-
-                    </LabelCollection>
-                {/* <BillboardCollection modelMatrix={CesiumInstance.Transforms.eastNorthUpToFixedFrame(center)}> */}
-                        {/* <Billboard id={zone.id} position={getEntityProperties(zone, false).position} {...getEntityProperties(zone, false)}/> */}
-                {/* </BillboardCollection> */}
+                        );
+                    })}
+                </LabelCollection>
             </Viewer>
 
-            {/* Tour controls remain the same */}
+            {/* Tour Controls */}
             {showTour && (
                 <EarthquakeTour
                     disasterZones={disasterZones}
                     viewerRef={viewerRef}
+                    setHighlightedZone={setHighlightedZone}
                     onClose={() => {
                         setShowTour(false);
                         setHighlightedZone(null);
@@ -185,6 +158,7 @@ const CesiumMap: React.FC<CesiumMapProps> = ({ disasterZones, onZoneSelect }) =>
                 />
             )}
 
+            {/* Start Tour Button */}
             {!showTour && disasterZones.length > 0 && (
                 <button
                     onClick={() => setShowTour(true)}
@@ -198,13 +172,19 @@ const CesiumMap: React.FC<CesiumMapProps> = ({ disasterZones, onZoneSelect }) =>
     );
 };
 
+
 function getRiskColor(riskLevel: DisasterZone['riskLevel']): Cesium.Color {
     switch (riskLevel) {
-        case 'severe': return CesiumInstance.Color.RED;
-        case 'high': return CesiumInstance.Color.ORANGE;
-        case 'medium': return CesiumInstance.Color.YELLOW;
-        case 'low': return CesiumInstance.Color.GREEN;
-        default: return CesiumInstance.Color.BLUE;
+        case 'severe':
+            return CesiumInstance.Color.RED;
+        case 'high':
+            return CesiumInstance.Color.ORANGE;
+        case 'medium':
+            return CesiumInstance.Color.YELLOW;
+        case 'low':
+            return CesiumInstance.Color.GREEN;
+        default:
+            return CesiumInstance.Color.BLUE;
     }
 }
 
