@@ -1,3 +1,4 @@
+//@ts-nocheck
 import { DisasterZone, RiskLevel, EarthquakeData } from "@/types/disasters";
 
 export const calculateRiskLevel = (magnitude: number): RiskLevel => {

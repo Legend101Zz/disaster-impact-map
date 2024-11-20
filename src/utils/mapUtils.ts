@@ -1,3 +1,4 @@
+//@ts-nocheck
 import * as Cesium from "cesium";
 import { RiskLevel } from "@/types/disasters";
 

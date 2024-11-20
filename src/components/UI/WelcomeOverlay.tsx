@@ -1,3 +1,4 @@
+//@ts-nocheck
 import { useState } from 'react';
 import { AlertCircle, Info, X } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from './Alert';

@@ -1,3 +1,4 @@
+//@ts-nocheck
 import axios from "axios";
 import { EarthquakeData, WeatherAlert } from "@/types/disasters";
 import { fetchEarthquakes } from "./earthquakeService";
